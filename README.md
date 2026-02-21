@@ -237,8 +237,6 @@ EOF
 git add src/apriori.py
 git commit -m "feat: добавлена валидация правил (Мария Иванова)"
 
-# Возврат к своему email
-git config user.email "kventin.dansu@example.com"
 
 # Использование git blame
 git blame src/apriori.py > docs/blame_result.txt
@@ -250,5 +248,166 @@ cat docs/blame_result.txt
 EOF
 
 # Завершение разрешения конфликта
+cat > src/apriori.py << 'EOF'
+"""
+Модуль для анализа товарной корзины (Market Basket Analysis)
+Алгоритм Apriori для поиска ассоциативных правил
+
+Автор: ДАНСУ КВЕНТИН
+Группа: БД-251м
+Вариант: 12
+"""
+
+from itertools import combinations
+from collections import defaultdict
+
+class Apriori:
+    """
+    Реализация алгоритма Apriori для поиска часто встречающихся наборов товаров
+    """
+    
+    def __init__(self, min_support=0.1, min_confidence=0.5):
+        """
+        Инициализация алгоритма
+        
+        Args:
+            min_support (float): Минимальная поддержка (0.1 = 10%)
+            min_confidence (float): Минимальная достоверность (0.5 = 50%)
+        """
+        self.min_support = min_support
+        self.min_confidence = min_confidence
+        self.frequent_itemsets = []
+        self.rules = []
+        
+    def fit(self, transactions):
+        """
+        Обучение алгоритма на транзакциях
+        
+        Args:
+            transactions (list): Список транзакций (каждая транзакция - список товаров)
+        """
+        print(f"Обучение Apriori на {len(transactions)} транзакциях")
+        print(f"Параметры: min_support={self.min_support}, min_confidence={self.min_confidence}")
+        
+        # Подсчет частоты отдельных товаров
+        item_counts = defaultdict(int)
+        for transaction in transactions:
+            for item in transaction:
+                item_counts[item] += 1
+        
+        # Фильтрация по минимальной поддержке
+        n_transactions = len(transactions)
+        frequent_items = [
+            (item,) for item, count in item_counts.items()
+            if count / n_transactions >= self.min_support
+        ]
+        
+        self.frequent_itemsets = frequent_items
+        print(f"Найдено частых наборов: {len(self.frequent_itemsets)}")
+        
+        # Генерация правил
+        self._generate_rules(transactions)
+        
+    def _generate_rules(self, transactions):
+        """
+        Генерация ассоциативных правил
+        """
+        n_transactions = len(transactions)
+        
+        for itemset in self.frequent_itemsets:
+            if len(itemset) == 1:
+                continue
+                
+            for i in range(1, len(itemset)):
+                for antecedent in combinations(itemset, i):
+                    consequent = tuple(set(itemset) - set(antecedent))
+                    
+                    # Вычисление поддержки и достоверности
+                    support_antecedent = self._calculate_support(antecedent, transactions)
+                    support_both = self._calculate_support(itemset, transactions)
+                    
+                    if support_antecedent > 0:
+                        confidence = support_both / support_antecedent
+                        
+                        if confidence >= self.min_confidence:
+                            self.rules.append({
+                                'antecedent': antecedent,
+                                'consequent': consequent,
+                                'support': support_both,
+                                'confidence': confidence
+                            })
+        
+        print(f"Сгенерировано правил: {len(self.rules)}")
+    
+    def _calculate_support(self, itemset, transactions):
+        """
+        Вычисление поддержки для набора товаров
+        """
+        count = 0
+        for transaction in transactions:
+            if set(itemset).issubset(set(transaction)):
+                count += 1
+        return count / len(transactions)
+    
+    def get_rules(self):
+        """
+        Получение сгенерированных правил
+        """
+        return self.rules
+    
+    def predict(self, items):
+        """
+        Предсказание товаров на основе текущей корзины
+        
+        Args:
+            items (list): Товары в корзине
+            
+        Returns:
+            list: Рекомендуемые товары
+        """
+        recommendations = defaultdict(float)
+        
+        for rule in self.rules:
+            if set(rule['antecedent']).issubset(set(items)):
+                for item in rule['consequent']:
+                    if item not in items:
+                        recommendations[item] = max(recommendations[item], rule['confidence'])
+        
+        return sorted(recommendations.items(), key=lambda x: x[1], reverse=True)
+
+
+if __name__ == "__main__":
+    # Тестовые данные
+    test_transactions = [
+        ['хлеб', 'молоко', 'масло'],
+        ['хлеб', 'молоко'],
+        ['хлеб', 'масло'],
+        ['молоко', 'масло'],
+        ['хлеб', 'молоко', 'масло', 'яйца'],
+        ['молоко', 'яйца'],
+        ['хлеб', 'яйца']
+    ]
+    
+    print("=" * 50)
+    print("ТЕСТИРОВАНИЕ АЛГОРИТМА APRIORI")
+    print("=" * 50)
+    
+    # Создание и обучение модели
+    model = Apriori(min_support=0.3, min_confidence=0.6)
+    model.fit(test_transactions)
+    
+    # Вывод правил
+    print("\nСгенерированные правила:")
+    for i, rule in enumerate(model.get_rules()[:3], 1):
+        print(f"{i}. {rule['antecedent']} -> {rule['consequent']} "
+              f"(поддержка={rule['support']:.2f}, достоверность={rule['confidence']:.2f})")
+    
+    # Тест рекомендаций
+    print("\nРекомендации для корзины [хлеб, молоко]:")
+    for item, conf in model.predict(['хлеб', 'молоко']):
+        print(f"   - {item}: достоверность={conf:.2f}")
+    
+    print("\n" + "=" * 50)
+EOF
 git add src/apriori.py
 git commit -m "merge: разрешение конфликта - объединение двух версий Apriori"
