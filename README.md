@@ -219,10 +219,6 @@ if __name__ == "__main__":
     
     # Тест экспорта
     model.export_rules_to_csv("test_rules.csv")
-    
-    # Тест быстрой версии
-    # Смена автора для демонстрации git blame
-git config user.email "maria.ivanova@example.com"
 
 # Добавление строки от другого разработчика
 cat >> src/apriori.py << 'EOF'
@@ -232,10 +228,7 @@ def validate_rules(rules, min_confidence=0.5):
     Валидация правил (добавлено Марией Ивановой)
     """
     return [r for r in rules if r['confidence'] >= min_confidence]
-EOF
 
-git add src/apriori.py
-git commit -m "feat: добавлена валидация правил (Мария Иванова)"
 
 
 # Использование git blame
